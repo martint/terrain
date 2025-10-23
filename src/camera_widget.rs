@@ -8,8 +8,7 @@ pub struct CameraWidgetPlugin;
 
 impl Plugin for CameraWidgetPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, setup_camera_widget)
-            .add_systems(Update, sync_widget_axes);
+        app.add_systems(Update, sync_widget_axes);
     }
 }
 
@@ -19,7 +18,7 @@ pub struct MainCamera;
 #[derive(Component)]
 struct WidgetAxes;
 
-fn setup_camera_widget(
+pub fn setup_camera_widget(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
@@ -182,4 +181,3 @@ fn sync_widget_axes(
 
     axes.rotation = main_camera.rotation.inverse();
 }
-

@@ -12,6 +12,7 @@ pub struct NormalLines;
 
 #[derive(Resource)]
 pub struct TerrainManager {
+    pub loaded : bool,
     pub wireframe_mode: bool,
     pub show_normals: bool,
 }
@@ -19,6 +20,7 @@ pub struct TerrainManager {
 impl Default for TerrainManager {
     fn default() -> Self {
         Self {
+            loaded : false,
             wireframe_mode: false,
             show_normals: false,
         }
@@ -62,13 +64,7 @@ pub fn toggle_normals_system(
     }
 }
 
-// Initialize the terrain system with 6 cube faces
-pub fn setup_terrain(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-    terrain_manager: Res<TerrainManager>,
-) {
+pub fn generate_terrain_mesh() -> (Mesh, Vec<[f32; 3]>, Vec<[f32; 3]>) {
     let resolution = 5000;
     let vertex_count = (resolution + 1) * (resolution + 1);
 
@@ -78,9 +74,7 @@ pub fn setup_terrain(
     for row in 0..=resolution {
         for col in 0..=resolution {
             let x = row as f32 - resolution as f32 / 2.0;
-            // let x = (row as f32);
             let z = col as f32 - resolution as f32 / 2.0;
-            // let z = (col as f32);
             let (y, normal) = sample(x, z);
             positions.push([x, y, z]);
             normals.push([normal.x, normal.y, normal.z]);
@@ -115,6 +109,18 @@ pub fn setup_terrain(
     mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normals.clone());
     mesh.insert_indices(Indices::U32(indices));
 
+    (mesh, positions, normals)
+}
+
+pub fn spawn_terrain_entity(
+    commands: &mut Commands,
+    meshes: &mut ResMut<Assets<Mesh>>,
+    materials: &mut ResMut<Assets<StandardMaterial>>,
+    mesh: Mesh,
+    positions: &Vec<[f32; 3]>,
+    normals: &Vec<[f32; 3]>,
+    terrain_manager: &TerrainManager,
+) {
     let mut tile = commands.spawn((
         Tile {},
         MeshMaterial3d(materials.add(Color::srgb_u8(228, 172, 155))),
@@ -125,7 +131,7 @@ pub fn setup_terrain(
         tile.insert(Wireframe);
     }
 
-    spawn_normals(&mut commands, &mut meshes, &mut materials, &positions, &normals);
+    spawn_normals(commands, meshes, materials, positions, normals);
 }
 
 fn spawn_normals(
