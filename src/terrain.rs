@@ -157,7 +157,12 @@ pub fn spawn_terrain_entity(
 ) {
     let mut tile = commands.spawn((
         Tile {},
-        MeshMaterial3d(materials.add(Color::srgb_u8(228, 172, 155))),
+        MeshMaterial3d(materials.add(StandardMaterial {
+            base_color: Color::srgb_u8(228, 172, 155),
+            perceptual_roughness: 1.0,
+            metallic: 0.0,
+            ..default()
+        })),
         Mesh3d(meshes.add(mesh)),
     ));
 
