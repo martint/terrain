@@ -1,7 +1,7 @@
 use bevy::camera::Exposure;
 use bevy::core_pipeline::tonemapping::Tonemapping;
 use bevy::diagnostic::{DiagnosticsStore, FrameTimeDiagnosticsPlugin};
-use bevy::light::AtmosphereEnvironmentMapLight;
+use bevy::light::{AtmosphereEnvironmentMapLight, CascadeShadowConfigBuilder};
 use bevy::light::light_consts::lux;
 use bevy::pbr::Atmosphere;
 use bevy::pbr::wireframe::{WireframeConfig, WireframePlugin};
@@ -222,13 +222,23 @@ fn setup_environment(mut commands: Commands) {
         MainCamera,
     ));
 
+    let cascade_shadow_config = CascadeShadowConfigBuilder {
+        num_cascades: 4,
+        first_cascade_far_bound: 20.0,
+        maximum_distance: 2000.0,
+        overlap_proportion: 0.15,
+        ..default()
+    }
+        .build();
+
     commands.spawn((
         DirectionalLight {
-            shadows_enabled: false,
+            shadows_enabled: true,
             illuminance: lux::RAW_SUNLIGHT,
             ..default()
         },
         Transform::from_xyz(0.0, 1.0, 4.0).looking_at(Vec3::ZERO, Vec3::Y),
+        cascade_shadow_config
     ));
 }
 
