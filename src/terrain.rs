@@ -6,6 +6,9 @@ use bevy_mesh::Indices;
 use futures_lite::future;
 use wgpu_types::PrimitiveTopology;
 
+const GRASS_COLOR: Color = Color::srgb(0.51, 0.51, 0.1);
+const ROCK_COLOR: Color = Color::srgb(0.894, 0.675, 0.608);
+
 #[derive(Component, Clone, Copy)]
 pub struct Tile {}
 
@@ -72,6 +75,7 @@ pub fn generate_terrain_mesh() -> (Mesh, Vec<[f32; 3]>, Vec<[f32; 3]>) {
 
     let mut positions: Vec<[f32; 3]> = Vec::with_capacity(vertex_count);
     let mut normals: Vec<[f32; 3]> = Vec::with_capacity(vertex_count);
+    let mut colors: Vec<[f32; 4]> = Vec::with_capacity(vertex_count);
 
     for row in 0..=resolution {
         for col in 0..=resolution {
@@ -80,6 +84,12 @@ pub fn generate_terrain_mesh() -> (Mesh, Vec<[f32; 3]>, Vec<[f32; 3]>) {
             let (y, normal) = sample(x, z);
             positions.push([x, y, z]);
             normals.push([normal.x, normal.y, normal.z]);
+
+            // Calculate vegetation blend based on surface normal
+            let blend = smoothstep_bounds(0.7, 0.8, normal.y);
+            let color = ROCK_COLOR.mix(&GRASS_COLOR, blend).to_linear();
+
+            colors.push([color.red, color.green, color.blue, color.alpha]);
         }
     }
 
@@ -109,6 +119,7 @@ pub fn generate_terrain_mesh() -> (Mesh, Vec<[f32; 3]>, Vec<[f32; 3]>) {
 
     mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions.clone());
     mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normals.clone());
+    mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, colors);
     mesh.insert_indices(Indices::U32(indices));
 
     (mesh, positions, normals)
@@ -158,7 +169,7 @@ pub fn spawn_terrain_entity(
     let mut tile = commands.spawn((
         Tile {},
         MeshMaterial3d(materials.add(StandardMaterial {
-            base_color: Color::srgb_u8(228, 172, 155),
+            base_color: Color::WHITE,
             perceptual_roughness: 1.0,
             metallic: 0.0,
             ..default()
@@ -242,7 +253,13 @@ fn hash(p: Vec2) -> f32 {
 }
 
 fn smoothstep(x: f32) -> f32 {
+    let x = x.clamp(0.0, 1.0);
     x * x * (3.0 - 2.0 * x)
+}
+
+fn smoothstep_bounds(low: f32, high: f32, x: f32) -> f32 {
+    let t = ((x - low) / (high - low)).clamp(0.0, 1.0);
+    smoothstep(t)
 }
 
 fn noise(t: Vec2) -> (f32, Vec2) // value, dx, dy
