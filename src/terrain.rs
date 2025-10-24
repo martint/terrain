@@ -6,7 +6,7 @@ use bevy_mesh::Indices;
 use futures_lite::future;
 use wgpu_types::PrimitiveTopology;
 
-const GRASS_COLOR: Color = Color::srgb(0.51, 0.51, 0.1);
+const TREE_COLOR: Color = Color::srgb(0.51, 0.51, 0.1);
 const ROCK_COLOR: Color = Color::srgb(0.894, 0.675, 0.608);
 
 #[derive(Component, Clone, Copy)]
@@ -69,6 +69,9 @@ pub fn toggle_normals_system(
     }
 }
 
+const TREE_DENSITY: f32 = 0.6;
+const SNOW_DENSITY: f32 = 0.3;
+
 pub fn generate_terrain_mesh() -> (Mesh, Vec<[f32; 3]>, Vec<[f32; 3]>) {
     let resolution = 5000;
     let vertex_count = (resolution + 1) * (resolution + 1);
@@ -85,9 +88,24 @@ pub fn generate_terrain_mesh() -> (Mesh, Vec<[f32; 3]>, Vec<[f32; 3]>) {
             positions.push([x, y, z]);
             normals.push([normal.x, normal.y, normal.z]);
 
-            // Calculate vegetation blend based on surface normal
-            let blend = smoothstep_bounds(0.7, 0.8, normal.y);
-            let color = ROCK_COLOR.mix(&GRASS_COLOR, blend).to_linear();
+            let mut color = ROCK_COLOR;
+
+            let (snow_density, _) = fbm(Vec2::new((x + 163.123) / 100.0, (z + 531.756) / 100.0));
+            let snow_density = snow_density * smoothstep_bounds(300.0, 500.0, y);
+
+            if snow_density > SNOW_DENSITY {
+                let snow_blend = smoothstep_bounds(0.6, 0.65, normal.y);
+                color = ROCK_COLOR.mix(&Color::WHITE, snow_blend);
+            }
+
+            let (tree_density, _) = fbm(Vec2::new((x + 23.543) / 50.0, (z + 543.123) / 50.0));
+            let tree_density = tree_density * (1.0 - smoothstep_bounds(320.0, 450.0, y));
+            if tree_density > TREE_DENSITY {
+                let tree_blend = smoothstep_bounds(0.6, 0.75, normal.y);
+                color = color.mix(&TREE_COLOR, tree_blend)
+            }
+
+            let color = color.to_linear();
 
             colors.push([color.red, color.green, color.blue, color.alpha]);
         }
